@@ -22,7 +22,8 @@ export const AuthProvider = ({ children }) => {
       if (isSignedIn) {
         try {
           const res = await mockApi.fetchCurrentUser();
-          setUserData(res);
+          console.log('Fetched user role:', res);
+          setUserData(res.data);
         } catch (err) {
           console.error('Failed to fetch user role:', err);
         } finally {

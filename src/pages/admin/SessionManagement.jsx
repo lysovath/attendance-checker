@@ -1,6 +1,6 @@
 // src/pages/admin/SessionManagement.jsx
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Plus, 
@@ -11,34 +11,35 @@ import {
   X, 
   Trash2, 
   ChevronRight,
-  Search
+  Search,
+  Loader2
 } from 'lucide-react';
 
-export const SessionManagement = ({ 
-  courseName = "React Fundamentals 2026",
-  groupId = 1,
-  courseId = 1
-}) => {
-  const [sessions, setSessions] = useState([
-    {
-      id: 's1',
-      name: 'Session 1: React Basics & JSX',
-      startTime: '2026-08-20T09:00',
-      endTime: '2026-08-20T11:00',
-    },
-    {
-      id: 's2',
-      name: 'Session 2: State & Props',
-      startTime: '2026-08-22T09:00',
-      endTime: '2026-08-22T11:00',
-    },
-    {
-      id: 's3',
-      name: 'Session 3: Hooks & Effects',
-      startTime: '2026-08-24T09:00',
-      endTime: '2026-08-24T11:00',
-    },
-  ]);
+import { mockApi } from '../../api/axiosInstance.js';
+
+const formatISOToInput = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+
+  const pad = (num) => String(num).padStart(2, '0');
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+export const SessionManagement = () => {
+  const [sessions, setSessions] = useState([]);
+  const { groupId, courseId } = useParams();
+
+  // Async Loading States
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Form states for creating a new session
   const [newSessionName, setNewSessionName] = useState('');
@@ -51,47 +52,79 @@ export const SessionManagement = ({
   const [editData, setEditData] = useState({ name: '', startTime: '', endTime: '' });
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const courseName = location.state?.courseName || 'Course Sessions';
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      setIsLoading(true);
+      try {
+        const response = await mockApi.getSessions(groupId, courseId);
+        setSessions(response.data);
+      } catch (err) {
+        console.error('Error fetching sessions:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSessions();
+  }, [groupId, courseId]);
+
   const onBack = () => {
     navigate(`/admin/groups/${groupId}`);
-  }
+  };
+
   // Handle Create Session
-  const handleCreateSession = (e) => {
+  const handleCreateSession = async (e) => {
     e.preventDefault();
-    if (!newSessionName.trim() || !newStartTime || !newEndTime) return;
+    if (!newSessionName.trim() || !newStartTime || !newEndTime || isCreating) return;
 
-    const newSession = {
-      id: Date.now().toString(),
-      name: newSessionName,
-      startTime: newStartTime,
-      endTime: newEndTime,
-    };
+    setIsCreating(true);
+    try {
+      const newSession = {
+        name: newSessionName,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      };
 
-    setSessions([...sessions, newSession]);
-    setNewSessionName('');
-    setNewStartTime('');
-    setNewEndTime('');
+      const res = await mockApi.createSession(Number(groupId), Number(courseId), newSession);
+
+      const createdSession = res.data;
+      setSessions((prev) => [...prev, createdSession]);
+      setNewSessionName('');
+      setNewStartTime('');
+      setNewEndTime('');
+    } catch (err) {
+      console.error('Error creating session:', err);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   // Start Editing Session
   const handleStartEdit = (session, e) => {
-    e.stopPropagation(); // Prevent triggering navigation to attendance
+    e.stopPropagation();
     setEditingId(session.id);
     setEditData({
       name: session.name,
-      startTime: session.startTime,
-      endTime: session.endTime,
+      startTime: formatISOToInput(session.startTime),
+      endTime: formatISOToInput(session.endTime),
     });
   };
 
   // Save Session Edit
-  const handleSaveEdit = (id, e) => {
+  const handleSaveEdit = async (id, e) => {
     e.stopPropagation();
     if (!editData.name.trim() || !editData.startTime || !editData.endTime) return;
 
-    setSessions(
-      sessions.map((s) => (s.id === id ? { ...s, ...editData } : s))
-    );
-    setEditingId(null);
+    try {
+      const updatedSession = await mockApi.updateSession(id, editData);
+      setSessions(sessions.map((s) => (s.id === id ? updatedSession.data : s)));
+      setEditingId(null);
+      setEditData({ name: '', startTime: '', endTime: '' });
+    } catch (err) {
+      console.error('Error updating session:', err);
+    }
   };
 
   // Cancel Session Edit
@@ -101,16 +134,20 @@ export const SessionManagement = ({
   };
 
   // Delete Session
-  const handleDeleteSession = (id, e) => {
+  const handleDeleteSession = async (id, e) => {
     e.stopPropagation();
-    setSessions(sessions.filter((s) => s.id !== id));
+    try {
+      await mockApi.deleteSession(id);
+      setSessions(sessions.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    }
   };
 
-  // Navigate to Attendance Checklist (Placeholder)
+  // Navigate to Attendance Checklist
   const handleSessionClick = (session) => {
-    if (editingId) return; // Ignore click if actively editing
-    navigate(`/admin/groups/${groupId}/courses/${courseId}/sessions/${session.id}`);
-    // Future implementation: navigate(`/admin/sessions/${session.id}/attendance`);
+    if (editingId) return;
+    navigate(`/admin/groups/${groupId}/courses/${courseId}/sessions/${session.id}`, { state: { sessionName: session.name } });
   };
 
   // Helper to format ISO datetime-local string to readable output
@@ -160,8 +197,10 @@ export const SessionManagement = ({
                 type="text"
                 placeholder="e.g., Session 1: Introduction"
                 value={newSessionName}
+                disabled={isCreating}
+                required
                 onChange={(e) => setNewSessionName(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50"
               />
             </div>
 
@@ -172,8 +211,10 @@ export const SessionManagement = ({
               <input
                 type="datetime-local"
                 value={newStartTime}
+                disabled={isCreating}
+                required
                 onChange={(e) => setNewStartTime(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm text-gray-700"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm text-gray-700 disabled:bg-gray-50"
               />
             </div>
 
@@ -184,17 +225,29 @@ export const SessionManagement = ({
               <input
                 type="datetime-local"
                 value={newEndTime}
+                disabled={isCreating}
+                required
                 onChange={(e) => setNewEndTime(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm text-gray-700"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm text-gray-700 disabled:bg-gray-50"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg flex items-center justify-center space-x-2 hover:bg-primary/90 transition-colors text-sm pt-2"
+              disabled={isCreating}
+              className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg flex items-center justify-center space-x-2 hover:bg-primary/90 transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus size={18} />
-              <span>Create Session</span>
+              {isCreating ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={18} />
+                  <span>Create Session</span>
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -215,7 +268,12 @@ export const SessionManagement = ({
           </div>
 
           <div className="space-y-3">
-            {filteredSessions.length === 0 ? (
+            {isLoading ? (
+              <div className="p-12 text-center text-gray-500 border rounded-xl text-sm flex items-center justify-center space-x-2">
+                <Loader2 size={20} className="animate-spin text-primary" />
+                <span>Loading sessions...</span>
+              </div>
+            ) : filteredSessions.length === 0 ? (
               <div className="p-8 text-center text-gray-400 border rounded-xl text-sm">
                 No sessions scheduled yet.
               </div>

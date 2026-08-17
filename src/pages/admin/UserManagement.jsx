@@ -1,5 +1,5 @@
 // src/pages/admin/UserManagement.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -11,29 +11,24 @@ import {
   UserCheck, 
   GraduationCap,
   Mail,
-  IdCard
+  IdCard,
+  Loader2
 } from 'lucide-react';
+
+import { mockApi } from '../../api/axiosInstance.js';
 
 export const UserManagement = () => {
   const [activeRole, setActiveRole] = useState('admins'); // 'admins' | 'trainers' | 'trainees'
   const [searchFilter, setSearchFilter] = useState('');
 
+  // Loading States
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+
   // User Datasets
-  const [admins, setAdmins] = useState([
-    { id: 'ad1', name: 'Alex Mercer', email: 'alex.admin@academy.com' },
-    { id: 'ad2', name: 'Elena Rostova', email: 'elena.admin@academy.com' },
-  ]);
-
-  const [trainers, setTrainers] = useState([
-    { id: 'tr1', studentId: 'TR-9021', name: 'Sarah Connor', email: 'sarah.c@academy.com' },
-    { id: 'tr2', studentId: 'TR-4402', name: 'Kyle Reese', email: 'kyle.r@academy.com' },
-  ]);
-
-  const [trainees, setTrainees] = useState([
-    { id: 'te1', studentId: 'ST-1001', name: 'John Doe', email: 'john.doe@student.com' },
-    { id: 'te2', studentId: 'ST-1002', name: 'Jane Smith', email: 'jane.smith@student.com' },
-    { id: 'te3', studentId: 'ST-1003', name: 'Robert Paulson', email: 'robert.p@student.com' },
-  ]);
+  const [admins, setAdmins] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+  const [trainees, setTrainees] = useState([]);
 
   // Form State for Adding Users
   const [formData, setFormData] = useState({ name: '', email: '', studentId: '' });
@@ -41,6 +36,32 @@ export const UserManagement = () => {
   // Inline Editing State
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const [ usersResponse, traineeReponse ] = await Promise.all([
+          mockApi.getUsers(),
+          mockApi.getTrainees()
+        ]);
+        console.log('Fetched Users:', usersResponse.data);
+        console.log('Fetched Trainees:', traineeReponse.data);
+        const fetchedAdmins = (usersResponse.data || []).filter(user => user.role.toLowerCase() === 'admin');
+        const fetchedTrainers = (usersResponse.data || []).filter(user => user.role.toLowerCase() === 'trainer');
+        const fetchedTrainees = traineeReponse.data || [];
+
+        setAdmins(fetchedAdmins);
+        setTrainers(fetchedTrainers);
+        setTrainees(fetchedTrainees);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUsers(); 
+  }, []);
 
   // Helper getters/setters for active tab data
   const getActiveState = () => {
@@ -52,20 +73,31 @@ export const UserManagement = () => {
   const { list: activeList, setList: setActiveList } = getActiveState();
 
   // Handle Add User
-  const handleAddUser = (e) => {
+  const handleAddUser = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) return;
+    if (!formData.name.trim() || !formData.email.trim() || isCreating) return;
     if (activeRole !== 'admins' && !formData.studentId.trim()) return;
 
-    const newUser = {
-      id: `${activeRole.slice(0, 2)}${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      ...(activeRole !== 'admins' && { studentId: formData.studentId }),
-    };
+    setIsCreating(true);
 
-    setActiveList([...activeList, newUser]);
-    setFormData({ name: '', email: '', studentId: '' });
+    try {
+      if (activeRole === 'admins') {
+        const res = await mockApi.createAdminUser({ name: formData.name, email: formData.email });
+        setActiveList([...activeList, res.data]);
+      } else if (activeRole === 'trainers') {
+        const res = await mockApi.createTrainerUser({ name: formData.name, email: formData.email, studentId: formData.studentId });
+        setActiveList([...activeList, res.data]);
+      } else if (activeRole === 'trainees') {
+        const res = await mockApi.createTrainee({ name: formData.name, email: formData.email, studentId: formData.studentId });
+        console.log('Created Trainee:', res.data);
+        setActiveList([...activeList, res.data]);
+      }
+      setFormData({ name: '', email: '', studentId: '' });
+    } catch (err) {
+      console.error('Error creating user:', err);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   // Handle Start Edit Name
@@ -120,7 +152,8 @@ export const UserManagement = () => {
                 placeholder="e.g. John Doe"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+                disabled={isCreating}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
 
@@ -131,11 +164,12 @@ export const UserManagement = () => {
                 placeholder="e.g. john@academy.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+                disabled={isCreating}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
 
-            {/* Student ID / Trainer ID Field (Required for Trainers and Trainees) */}
+            {/* Student ID / Trainer ID Field */}
             {activeRole !== 'admins' && (
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -146,17 +180,28 @@ export const UserManagement = () => {
                   placeholder={activeRole === 'trainers' ? 'e.g. TR-9021' : 'e.g. ST-1001'}
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+                  disabled={isCreating}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
                 />
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg flex items-center justify-center space-x-2 hover:bg-primary/90 transition-colors text-sm pt-2"
+              disabled={isCreating || !formData.name.trim() || !formData.email.trim()}
+              className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg flex items-center justify-center space-x-2 hover:bg-primary/90 transition-colors text-sm pt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Plus size={18} />
-              <span className="capitalize">Add {activeRole.slice(0, -1)}</span>
+              {isCreating ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="capitalize">Adding {activeRole.slice(0, -1)}...</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={18} />
+                  <span className="capitalize">Add {activeRole.slice(0, -1)}</span>
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -213,7 +258,12 @@ export const UserManagement = () => {
 
           {/* User List Table Container */}
           <div className="divide-y divide-gray-100 border rounded-lg overflow-hidden">
-            {filteredUsers.length === 0 ? (
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-500 flex items-center justify-center space-x-2">
+                <Loader2 size={20} className="animate-spin text-primary" />
+                <span className="text-sm">Loading users...</span>
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="p-8 text-center text-gray-400 text-sm">
                 No {activeRole} found matching your search.
               </div>

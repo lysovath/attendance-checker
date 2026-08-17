@@ -1,6 +1,6 @@
 // src/pages/admin/AdminSessionAttendancePage.jsx
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Search, 
@@ -8,10 +8,13 @@ import {
   UserCheck, 
   Save, 
   RotateCcw,
-  CheckCircle2 
+  CheckCircle2,
+  Loader2 
 } from 'lucide-react';
 
-const STATUS_TYPES = ['Present', 'Absent', 'Excused', 'Late'];
+import { mockApi } from '../../api/axiosInstance.js';
+
+const STATUS_TYPES = ['PRESENT', 'LATE', 'EXCUSED', 'ABSENT'];
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
@@ -32,48 +35,63 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const mockTrainees = [
-  { id: 'st1', studentId: 'TRN-001', name: 'John Doe', email: 'john@example.com', status: 'Present' },
-  { id: 'st2', studentId: 'TRN-002', name: 'Jane Smith', email: 'jane@example.com', status: 'Absent' },
-  { id: 'st3', studentId: 'TRN-003', name: 'Robert Paulson', email: 'robert@example.com', status: 'Excused' },
-];
-
-const mockTrainers = [
-  { id: 'tr1', studentId: 'TR-9021', name: 'Sarah Connor', email: 'sarah.c@academy.com', status: 'Present' },
-  { id: 'tr2', studentId: 'TR-4402', name: 'Kyle Reese', email: 'kyle.r@academy.com', status: 'Present' },
-];
-
-export const AdminSessionAttendancePage = ({ 
-  sessionName = "Session 1: React Basics & JSX" 
-}) => {
-  const { sessionId } = useParams();
+export const AdminSessionAttendancePage = () => {
+  const { groupId, sessionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionName = location.state?.sessionName || 'Session Attendance';
   
   const [activeTab, setActiveTab] = useState('trainees'); // 'trainees' | 'trainers'
   
+  // Loading & state management
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   // Committed attendance state (from backend)
-  const [trainees, setTrainees] = useState(mockTrainees);
-  const [trainers, setTrainers] = useState(mockTrainers);
+  const [trainees, setTrainees] = useState([]);
+  const [trainers, setTrainers] = useState([]);
 
   // Draft state holding local edits before batch saving
   const [traineeDrafts, setTraineeDrafts] = useState({});
   const [trainerDrafts, setTrainerDrafts] = useState({});
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
 
   // Select active state based on tab
   const isTraineeTab = activeTab === 'trainees';
   const currentList = isTraineeTab ? trainees : trainers;
   const currentDrafts = isTraineeTab ? traineeDrafts : trainerDrafts;
   const setDrafts = isTraineeTab ? setTraineeDrafts : setTrainerDrafts;
+  const setList = isTraineeTab ? setTrainees : setTrainers;
+
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      setIsLoading(true);
+      try {
+        const [traineeAttendanceResponse, trainerAttendanceResponse] = await Promise.all([
+          mockApi.getTraineeAttendance(sessionId),
+          mockApi.getTrainerAttendance(sessionId)
+        ]);
+        console.log('Fetched Trainee Attendance:', traineeAttendanceResponse.data);
+        console.log('Fetched Trainer Attendance:', trainerAttendanceResponse.data);
+        setTrainees(traineeAttendanceResponse.data?.trainees || []);
+        setTrainers(trainerAttendanceResponse.data?.trainers || []);
+      } catch (err) {
+        console.error('Error fetching attendance data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAttendanceData();
+  }, [sessionId]);
 
   // Handle staging a status change locally
   const handleStageStatus = (personId, originalStatus, newStatus) => {
     setDrafts((prev) => {
       const updated = { ...prev };
       if (newStatus === originalStatus) {
-        delete updated[personId]; // Clear staged edit if reverted to original
+        delete updated[personId];
       } else {
         updated[personId] = newStatus;
       }
@@ -82,8 +100,8 @@ export const AdminSessionAttendancePage = ({
   };
 
   const onBack = () => {
-    navigate(-1); // Navigate back to the previous page
-  }
+    navigate(-1);
+  };
 
   // Check if there are uncommitted changes across both tabs
   const hasUnsavedChanges = 
@@ -98,43 +116,51 @@ export const AdminSessionAttendancePage = ({
   // Submit batch payload to API
   const handleBatchSave = async () => {
     if (!hasUnsavedChanges) return;
-
-    // Build batch payload for backend API call
-    const payload = {
-      sessionId: sessionId || 'SESS-2026-01',
-      traineeUpdates: Object.entries(traineeDrafts).map(([id, status]) => ({ id, status })),
-      trainerUpdates: Object.entries(trainerDrafts).map(([id, status]) => ({ id, status })),
-    };
-
-    console.log('Sending Batch Payload to Backend:', payload);
-
     setIsSaving(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // Commit draft values into main state
-      setTrainees((prev) =>
-        prev.map((t) => (traineeDrafts[t.id] ? { ...t, status: traineeDrafts[t.id] } : t))
-      );
-      setTrainers((prev) =>
-        prev.map((t) => (trainerDrafts[t.id] ? { ...t, status: trainerDrafts[t.id] } : t))
+
+    const drafts = isTraineeTab ? [traineeDrafts] : [trainerDrafts];
+
+    console.log(`Preparing to save batch attendance for session ${sessionId} with drafts:`, drafts);
+
+    const payload = drafts.map((draft) => {
+      if (isTraineeTab) {
+        let [traineeId, status] = Object.entries(draft)[0];
+        traineeId = parseInt(traineeId, 10);
+        return { traineeId, status };
+      } else {
+        let [trainerId, status] = Object.entries(draft)[0];
+        trainerId = parseInt(trainerId, 10);
+        return { trainerId, status };
+      }
+    });
+
+    try {
+      if (isTraineeTab) {
+        await mockApi.batchCreateTraineeAttendance(sessionId, payload);
+      } else {
+        await mockApi.batchCreateTrainerAttendances(sessionId, payload);
+      }
+      setList((prev) =>
+        prev.map((person) => {
+          const stagedStatus = currentDrafts[person.id];
+          return stagedStatus ? { ...person, status: stagedStatus } : person;
+        })
       );
 
-      // Clear draft states
-      setTraineeDrafts({});
-      setTrainerDrafts({});
+      setDrafts({});
+    } catch (err) {
+      console.error('Error saving batch attendance:', err);
+    } finally {
       setIsSaving(false);
-
-      alert('Batch attendance update saved successfully!');
-    }, 600);
+    }
   };
 
   // Filter list by search query
   const filteredList = currentList.filter(
     (person) =>
-      person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.email.toLowerCase().includes(searchQuery.toLowerCase())
+      person.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.studentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -162,7 +188,7 @@ export const AdminSessionAttendancePage = ({
             <button
               onClick={handleResetDrafts}
               disabled={isSaving}
-              className="px-3.5 py-2 text-gray-600 bg-gray-100 font-semibold rounded-xl hover:bg-gray-200 transition-colors text-xs flex items-center space-x-1.5"
+              className="px-3.5 py-2 text-gray-600 bg-gray-100 font-semibold rounded-xl hover:bg-gray-200 transition-colors text-xs flex items-center space-x-1.5 disabled:opacity-60"
             >
               <RotateCcw size={15} />
               <span>Discard Edits</span>
@@ -173,14 +199,18 @@ export const AdminSessionAttendancePage = ({
             onClick={handleBatchSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`px-5 py-2.5 font-semibold rounded-xl transition-all shadow-sm flex items-center space-x-2 text-sm ${
-              hasUnsavedChanges
+              hasUnsavedChanges && !isSaving
                 ? 'bg-primary text-white hover:bg-primary/90 cursor-pointer'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            <Save size={18} />
+            {isSaving ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Save size={18} />
+            )}
             <span>{isSaving ? 'Saving Payload...' : 'Save Changes'}</span>
-            {hasUnsavedChanges && (
+            {hasUnsavedChanges && !isSaving && (
               <span className="ml-1.5 px-2 py-0.5 bg-white/20 text-white text-xs font-bold rounded-full">
                 {Object.keys(traineeDrafts).length + Object.keys(trainerDrafts).length}
               </span>
@@ -249,7 +279,16 @@ export const AdminSessionAttendancePage = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {filteredList.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="p-12 text-center text-gray-500">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 size={20} className="animate-spin text-primary" />
+                      <span>Loading attendance data...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredList.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-gray-400 text-sm">
                     No records found matching your search.
