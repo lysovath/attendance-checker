@@ -1,9 +1,11 @@
-// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/clerk-react';
+import { Toaster } from 'sonner';
+
 import { AuthProvider } from './context/AuthContext';
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 import App from './App';
 import './index.css';
 
@@ -15,12 +17,17 @@ if (!PUBLISHABLE_KEY) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
-    </ClerkProvider>
+
+    <Toaster position="bottom-right" richColors />
+    
+    <GlobalErrorBoundary>
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </ClerkProvider>
+    </GlobalErrorBoundary>
   </React.StrictMode>
 );

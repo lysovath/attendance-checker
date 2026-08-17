@@ -105,16 +105,16 @@ export const GroupDetail = () => {
         const updatedTrainers = trainers.filter((t) => t.id !== personId);
         await mockApi.updateGroupTrainers(groupId, updatedTrainers.map((t) => t.id));
         setTrainers(updatedTrainers);
-      } catch (err) {
-        console.error('Error removing trainer from group:', err);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Something went wrong');
       }
     } else {
       try {
         const updatedTrainees = trainees.filter((t) => t.id !== personId);
         await mockApi.updateGroupTrainees(groupId, updatedTrainees.map((t) => t.id));
         setTrainees(updatedTrainees);
-      } catch (err) {
-        console.error('Error removing trainee from group:', err);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Something went wrong');
       }
     }
   };
@@ -123,8 +123,8 @@ export const GroupDetail = () => {
     try {
       await mockApi.removeCourseFromGroup(groupId, courseId);
       setCourses((prev) => prev.filter((c) => c.id !== courseId));
-    } catch (err) {
-      console.error('Error removing course from group:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     }
   };
 
@@ -143,8 +143,8 @@ export const GroupDetail = () => {
       setCourses((prev) => [...prev, courseToAdd]);
       setIsCourseModalOpen(false);
       setSelectedCourseId('');
-    } catch (err) {
-      console.error('Error adding course to group:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     } finally {
       setIsAddingCourse(false);
     }
@@ -180,8 +180,8 @@ export const GroupDetail = () => {
         setTrainees(updatedList);
       }
       setIsPersonnelModalOpen(false);
-    } catch (err) {
-      console.error('Error updating group personnel:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     } finally {
       setIsSavingPersonnel(false);
     }

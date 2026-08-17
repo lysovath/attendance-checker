@@ -8,7 +8,6 @@ import {
   UserCheck, 
   Save, 
   RotateCcw,
-  CheckCircle2,
   Loader2 
 } from 'lucide-react';
 
@@ -18,6 +17,11 @@ const STATUS_TYPES = ['PRESENT', 'LATE', 'EXCUSED', 'ABSENT'];
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
+    PRESENT: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    ABSENT: 'bg-rose-50 text-rose-700 border-rose-200',
+    EXCUSED: 'bg-amber-50 text-amber-700 border-amber-200',
+    LATE: 'bg-purple-50 text-purple-700 border-purple-200',
+    // Fallbacks for Capitalized casing if returned by backend
     Present: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     Absent: 'bg-rose-50 text-rose-700 border-rose-200',
     Excused: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -72,12 +76,10 @@ export const AdminSessionAttendancePage = () => {
           mockApi.getTraineeAttendance(sessionId),
           mockApi.getTrainerAttendance(sessionId)
         ]);
-        console.log('Fetched Trainee Attendance:', traineeAttendanceResponse.data);
-        console.log('Fetched Trainer Attendance:', trainerAttendanceResponse.data);
         setTrainees(traineeAttendanceResponse.data?.trainees || []);
         setTrainers(trainerAttendanceResponse.data?.trainers || []);
-      } catch (err) {
-        console.error('Error fetching attendance data:', err);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Something went wrong');;
       } finally {
         setIsLoading(false);
       }
@@ -118,20 +120,13 @@ export const AdminSessionAttendancePage = () => {
     if (!hasUnsavedChanges) return;
     setIsSaving(true);
 
-    const drafts = isTraineeTab ? [traineeDrafts] : [trainerDrafts];
+    const drafts = isTraineeTab ? traineeDrafts : trainerDrafts;
 
-    console.log(`Preparing to save batch attendance for session ${sessionId} with drafts:`, drafts);
-
-    const payload = drafts.map((draft) => {
-      if (isTraineeTab) {
-        let [traineeId, status] = Object.entries(draft)[0];
-        traineeId = parseInt(traineeId, 10);
-        return { traineeId, status };
-      } else {
-        let [trainerId, status] = Object.entries(draft)[0];
-        trainerId = parseInt(trainerId, 10);
-        return { trainerId, status };
-      }
+    const payload = Object.entries(drafts).map(([personId, status]) => {
+      const parsedId = parseInt(personId, 10);
+      return isTraineeTab 
+        ? { traineeId: parsedId, status } 
+        : { trainerId: parsedId, status };
     });
 
     try {
@@ -148,8 +143,8 @@ export const AdminSessionAttendancePage = () => {
       );
 
       setDrafts({});
-    } catch (err) {
-      console.error('Error saving batch attendance:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     } finally {
       setIsSaving(false);
     }
@@ -170,7 +165,7 @@ export const AdminSessionAttendancePage = () => {
         <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="p-2 text-gray-500 hover:text-gray-800 hover:bg-slate-50 rounded-xl border border-gray-200 transition-all"
+            className="p-2 text-gray-500 hover:text-gray-800 hover:bg-slate-50 rounded-xl border border-gray-200 transition-all cursor-pointer"
           >
             <ArrowLeft size={20} />
           </button>
@@ -183,22 +178,22 @@ export const AdminSessionAttendancePage = () => {
         </div>
 
         {/* Batch Save Controls */}
-        <div className="flex items-center space-x-2 self-start sm:self-auto">
+        <div className="flex items-center space-x-2 self-start sm:self-auto w-full sm:w-auto">
           {hasUnsavedChanges && (
             <button
               onClick={handleResetDrafts}
               disabled={isSaving}
-              className="px-3.5 py-2 text-gray-600 bg-gray-100 font-semibold rounded-xl hover:bg-gray-200 transition-colors text-xs flex items-center space-x-1.5 disabled:opacity-60"
+              className="flex-1 sm:flex-initial px-3.5 py-2 text-gray-600 bg-gray-100 font-semibold rounded-xl hover:bg-gray-200 transition-colors text-xs flex items-center justify-center space-x-1.5 disabled:opacity-60 cursor-pointer"
             >
               <RotateCcw size={15} />
-              <span>Discard Edits</span>
+              <span>Discard</span>
             </button>
           )}
 
           <button
             onClick={handleBatchSave}
             disabled={!hasUnsavedChanges || isSaving}
-            className={`px-5 py-2.5 font-semibold rounded-xl transition-all shadow-sm flex items-center space-x-2 text-sm ${
+            className={`flex-1 sm:flex-initial px-5 py-2.5 font-semibold rounded-xl transition-all shadow-sm flex items-center justify-center space-x-2 text-sm ${
               hasUnsavedChanges && !isSaving
                 ? 'bg-primary text-white hover:bg-primary/90 cursor-pointer'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -209,7 +204,7 @@ export const AdminSessionAttendancePage = () => {
             ) : (
               <Save size={18} />
             )}
-            <span>{isSaving ? 'Saving Payload...' : 'Save Changes'}</span>
+            <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
             {hasUnsavedChanges && !isSaving && (
               <span className="ml-1.5 px-2 py-0.5 bg-white/20 text-white text-xs font-bold rounded-full">
                 {Object.keys(traineeDrafts).length + Object.keys(trainerDrafts).length}
@@ -220,13 +215,13 @@ export const AdminSessionAttendancePage = () => {
       </div>
 
       {/* Content Container */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-5">
         {/* Navigation & Search Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl w-full sm:w-fit">
             <button
               onClick={() => setActiveTab('trainees')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'trainees'
                   ? 'bg-white text-gray-900 shadow-xs'
                   : 'text-gray-500 hover:text-gray-900'
@@ -241,7 +236,7 @@ export const AdminSessionAttendancePage = () => {
 
             <button
               onClick={() => setActiveTab('trainers')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'trainers'
                   ? 'bg-white text-gray-900 shadow-xs'
                   : 'text-gray-500 hover:text-gray-900'
@@ -259,102 +254,169 @@ export const AdminSessionAttendancePage = () => {
             <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
             <input
               type="text"
-              placeholder={`Search ${activeTab} by name or ID...`}
+              placeholder={`Search ${activeTab}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/40 outline-none text-sm"
             />
           </div>
         </div>
 
-        {/* Table */}
-        <div className="border border-gray-100 rounded-xl overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-gray-100">
-              <tr>
-                <th className="p-4">{isTraineeTab ? 'Student ID' : 'Trainer ID'}</th>
-                <th className="p-4">Name</th>
-                <th className="p-4">Saved Status</th>
-                <th className="p-4 text-center">Stage New Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={4} className="p-12 text-center text-gray-500">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Loader2 size={20} className="animate-spin text-primary" />
-                      <span>Loading attendance data...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredList.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-400 text-sm">
-                    No records found matching your search.
-                  </td>
-                </tr>
-              ) : (
-                filteredList.map((person) => {
-                  const stagedStatus = currentDrafts[person.id];
-                  const isModified = stagedStatus !== undefined;
-                  const activeStatus = isModified ? stagedStatus : person.status;
+        {/* Loading / Empty States */}
+        {isLoading ? (
+          <div className="p-12 text-center text-gray-500 border border-gray-100 rounded-xl">
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 size={20} className="animate-spin text-primary" />
+              <span>Loading attendance data...</span>
+            </div>
+          </div>
+        ) : filteredList.length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm border border-gray-100 rounded-xl">
+            No records found matching your search.
+          </div>
+        ) : (
+          <>
+            {/* MOBILE VIEW: Card List */}
+            <div className="block md:hidden space-y-3">
+              {filteredList.map((person) => {
+                const stagedStatus = currentDrafts[person.id];
+                const isModified = stagedStatus !== undefined;
+                const activeStatus = isModified ? stagedStatus : person.status;
 
-                  return (
-                    <tr
-                      key={person.id}
-                      className={`transition-colors ${
-                        isModified ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/50'
-                      }`}
-                    >
-                      <td className="p-4 font-mono text-gray-600 text-xs">{person.studentId}</td>
-                      <td className="p-4">
+                return (
+                  <div
+                    key={person.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isModified 
+                        ? 'bg-amber-50/40 border-amber-200' 
+                        : 'bg-white border-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
                         <div className="flex items-center space-x-2">
-                          <div>
-                            <p className="font-medium text-gray-900">{person.name}</p>
-                            <p className="text-xs text-gray-400">{person.email}</p>
-                          </div>
+                          <p className="font-semibold text-gray-900">{person.name}</p>
                           {isModified && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md">
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md">
                               Staged
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="p-4">
+                        <p className="text-xs font-mono text-gray-500 mt-0.5">
+                          {isTraineeTab ? 'ID: ' : 'Trainer ID: '}{person.studentId}
+                        </p>
+                        <p className="text-xs text-gray-400">{person.email}</p>
+                      </div>
+                      <div>
                         <StatusBadge status={person.status} />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-center space-x-1">
-                          {STATUS_TYPES.map((status) => {
-                            const isSelected = activeStatus === status;
-                            return (
-                              <button
-                                key={status}
-                                onClick={() =>
-                                  handleStageStatus(person.id, person.status, status)
-                                }
-                                className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                                  isSelected
-                                    ? isModified
-                                      ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                                      : 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                }`}
-                              >
-                                {status}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2">
+                        Set New Status
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {STATUS_TYPES.map((status) => {
+                          const isSelected = activeStatus === status;
+                          return (
+                            <button
+                              key={status}
+                              onClick={() =>
+                                handleStageStatus(person.id, person.status, status)
+                              }
+                              className={`py-1.5 text-xs font-semibold rounded-lg border transition-all text-center cursor-pointer ${
+                                isSelected
+                                  ? isModified
+                                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                    : 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200 active:bg-gray-100'
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP VIEW: Table with horizontal scroll safeguard */}
+            <div className="hidden md:block border border-gray-100 rounded-xl overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[640px]">
+                <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-gray-100">
+                  <tr>
+                    <th className="p-4">{isTraineeTab ? 'Student ID' : 'Trainer ID'}</th>
+                    <th className="p-4">Name</th>
+                    <th className="p-4">Saved Status</th>
+                    <th className="p-4 text-center">Stage New Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {filteredList.map((person) => {
+                    const stagedStatus = currentDrafts[person.id];
+                    const isModified = stagedStatus !== undefined;
+                    const activeStatus = isModified ? stagedStatus : person.status;
+
+                    return (
+                      <tr
+                        key={person.id}
+                        className={`transition-colors ${
+                          isModified ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <td className="p-4 font-mono text-gray-600 text-xs">{person.studentId}</td>
+                        <td className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <div>
+                              <p className="font-medium text-gray-900">{person.name}</p>
+                              <p className="text-xs text-gray-400">{person.email}</p>
+                            </div>
+                            {isModified && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md">
+                                Staged
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <StatusBadge status={person.status} />
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-center space-x-1">
+                            {STATUS_TYPES.map((status) => {
+                              const isSelected = activeStatus === status;
+                              return (
+                                <button
+                                  key={status}
+                                  onClick={() =>
+                                    handleStageStatus(person.id, person.status, status)
+                                  }
+                                  className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? isModified
+                                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                        : 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {status}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

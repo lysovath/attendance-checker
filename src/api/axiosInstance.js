@@ -14,9 +14,7 @@ export const setupAxiosInterceptors = (getToken) => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    } catch (err) {
-      console.error('Failed to retrieve Clerk token:', err);
-    }
+    } catch (err) {}
     return config;
   });
 };
@@ -28,7 +26,6 @@ export const mockApi = {
         const response = await api.get('/me');
         return response.data;
      } catch (err) {
-        console.error('Error fetching current user:', err);
         throw err;
      }
   },
@@ -38,8 +35,16 @@ export const mockApi = {
         const response = await api.post('/auth/check-email', { email });
         return response.data;
     } catch (err) {
-        console.error('Error checking email:', err);
         throw err;
+    }
+  },
+
+  updateUser: async (userId, name) => {
+    try {
+        const response = await api.put(`/users/${userId}`, { name });
+        return response;
+    } catch (error) {
+        throw error;
     }
   },
 
@@ -48,7 +53,6 @@ export const mockApi = {
         const response = await api.get('/courses');
         return response.data;
     } catch (err) {
-        console.error('Error fetching courses:', err);
         throw err;
     }
   },
@@ -58,7 +62,6 @@ export const mockApi = {
         const response = await api.post('/courses', courseData);
         return response.data;
     } catch (err) {
-        console.error('Error creating course:', err);
         throw err;
     }
   },
@@ -68,7 +71,6 @@ export const mockApi = {
         const response = await api.put(`/courses/${courseId}`, updatedData);
         return response.data;
     } catch (err) {
-        console.error('Error updating course:', err);
         throw err;
     }
   },
@@ -78,7 +80,6 @@ export const mockApi = {
         const response = await api.delete(`/courses/${courseId}`);
         return response.data;
     } catch (err) {
-        console.error('Error deleting course:', err);
         throw err;
     }
   },
@@ -88,7 +89,6 @@ export const mockApi = {
         const response = await api.post(`/groups/${groupId}/courses`, { courseId });
         return response.data;
     } catch (err) {
-        console.error('Error adding course to group:', err);
         throw err;
     }
   },
@@ -98,7 +98,6 @@ export const mockApi = {
         const response = await api.delete(`/groups/${groupId}/courses`, { data: { courseId } });
         return response.data;
     } catch (err) {
-        console.error('Error removing course from group:', err);
         throw err;
     }
 },
@@ -108,7 +107,6 @@ export const mockApi = {
         const response = await api.get('/groups');
         return response.data;
     } catch (err) {
-        console.error('Error fetching groups:', err);
         throw err;
     }
   },
@@ -118,7 +116,6 @@ export const mockApi = {
         const response = await api.post('/groups', groupData);
         return response.data;
     } catch (err) {
-        console.error('Error creating group:', err);
         throw err;
     }
   },
@@ -128,7 +125,6 @@ export const mockApi = {
         const response = await api.get(`/groups/${groupId}`);
         return response.data;
     } catch (err) {
-        console.error('Error fetching group detail:', err);
         throw err;
     }
   },
@@ -138,7 +134,6 @@ export const mockApi = {
         const response = await api.put(`/groups/${groupId}`, { name });
         return response.data;
     } catch (err) {
-        console.error('Error updating group:', err);
         throw err;
     }
   },
@@ -148,7 +143,6 @@ export const mockApi = {
         const response = await api.delete(`/groups/${groupId}`);
         return response.data;
     } catch (err) {
-        console.error('Error deleting group:', err);
         throw err;
     }
   },
@@ -158,7 +152,6 @@ export const mockApi = {
         const response = await api.put(`/groups/${groupId}/trainers`, { trainerIds });
         return response.data;
     } catch (err) {
-        console.error('Error updating group trainers:', err);
         throw err;
     }
   },
@@ -168,7 +161,6 @@ export const mockApi = {
         const response = await api.put(`/groups/${groupId}/trainees`, { traineeIds });
         return response.data;
     } catch (err) {
-        console.error('Error updating group trainees:', err);
         throw err;
     }
   },
@@ -178,7 +170,6 @@ export const mockApi = {
         const response = await api.post(`/sessions`, { ...sessionData, groupId, courseId });
         return response.data;
     } catch (err) {
-        console.error('Error creating session:', err);
         throw err;
     }
 },
@@ -189,7 +180,6 @@ export const mockApi = {
         const response = await api.get(`/sessions`, { params: { groupId, courseId } });
         return response.data;
     } catch (err) {
-        console.error('Error fetching sessions:', err);
         throw err;
     }
   },
@@ -199,7 +189,6 @@ export const mockApi = {
         const response = await api.put(`/sessions/${sessionId}`, updatedData);
         return response.data;
     } catch (err) {
-        console.error('Error updating session:', err);
         throw err;
     }
   },
@@ -209,7 +198,6 @@ export const mockApi = {
         const response = await api.delete(`/sessions/${sessionId}`);
         return response.data;
     } catch (err) {
-        console.error('Error deleting session:', err);
         throw err;
     }
   },
@@ -219,7 +207,6 @@ export const mockApi = {
         const response = await api.get('/users', { params: { role: 'TRAINER', groupId } });
         return response.data;
     } catch (err) {
-        console.error('Error fetching trainer:', err);
         throw err;
     }
   },
@@ -229,7 +216,6 @@ export const mockApi = {
         const response = await api.get(`/sessions/${sessionId}/trainer-attendances`);
         return response.data;
     } catch (err) {
-        console.error('Error fetching trainer attendance:', err);
         throw err;
     }
  },
@@ -240,7 +226,6 @@ export const mockApi = {
         const response = await api.post(`/sessions/${sessionId}/trainer-attendances/batch`, trainerAttendanceData);
         return response.data;
     } catch (err) {
-        console.error('Error updating trainer attendance:', err);
         throw err;
     }
 },
@@ -250,8 +235,16 @@ export const mockApi = {
         const response = await api.get('/trainees', { params: { groupId } });
         return response.data;
     } catch (err) {
-        console.error('Error fetching trainees:', err);
         throw err;
+    }
+  },
+
+  updateTrainee: async (traineeId, name) => {
+    try {
+        const response = await api.put(`/trainees/${traineeId}`, {name});
+        return response.data;
+    } catch (error) {
+        throw error
     }
   },
 
@@ -260,7 +253,6 @@ export const mockApi = {
         const response = await api.get(`/sessions/${sessionId}/trainee-attendances`);
         return response.data;
     } catch (err) {
-        console.error('Error fetching trainee attendance:', err);
         throw err;
     }
   },
@@ -270,7 +262,6 @@ export const mockApi = {
         const response = await api.post(`/sessions/${sessionId}/trainee-attendances/batch`, traineeAttendanceDatas);
         return response.data;
     } catch (err) {
-        console.error('Error updating trainee attendance:', err);
         throw err;
     }
  },
@@ -280,7 +271,6 @@ export const mockApi = {
         const response = await api.post('/users', { ...userData, role: 'ADMIN' });
         return response.data;
     } catch (err) {
-        console.error('Error creating admin user:', err);
         throw err;
     }
   },
@@ -290,7 +280,6 @@ export const mockApi = {
         const response = await api.post('/users', { ...userData, role: 'TRAINER' });
         return response.data;
     } catch (err) {
-        console.error('Error creating trainer user:', err);
         throw err;
     }
   },
@@ -300,7 +289,6 @@ export const mockApi = {
         const response = await api.post('/trainees', traineeData);
         return response.data;
     } catch (err) {
-        console.error('Error creating trainee:', err);
         throw err;
     }
   },
@@ -310,7 +298,6 @@ export const mockApi = {
         const response = await api.get('/users');
         return response.data;
     } catch (err) {
-        console.error('Error fetching users:', err);
         throw err;
     }
   },

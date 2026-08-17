@@ -24,8 +24,8 @@ export const CourseManagement = () => {
       try {
         const response = await mockApi.getCourses();
         setCourses(response.data || []);
-      } catch (err) {
-        console.error('Error fetching courses:', err);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Something went wrong');
       } finally {
         setIsLoading(false);
       }
@@ -48,8 +48,8 @@ export const CourseManagement = () => {
       const createdCourse = res.data;
       setCourses((prev) => [...prev, createdCourse]);
       setNewCourseName('');
-    } catch (err) {
-      console.error('Error creating course:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     } finally {
       setIsCreating(false);
     }
@@ -70,8 +70,8 @@ export const CourseManagement = () => {
       setCourses(courses.map((c) => (c.id === id ? updatedCourse.data : c)));
       setEditingId(null);
       setEditName('');
-    } catch (err) {
-      console.error('Error updating course:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     }
   };
 
@@ -86,8 +86,8 @@ export const CourseManagement = () => {
     try {
       mockApi.deleteCourse(id);
       setCourses(courses.filter((c) => c.id !== id));
-    } catch (err) {
-      console.error('Error deleting course:', err);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
     }
   };
 

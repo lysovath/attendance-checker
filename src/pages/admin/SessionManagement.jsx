@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { mockApi } from '../../api/axiosInstance.js';
+import { toast } from 'sonner';
 
 const formatISOToInput = (isoString) => {
   if (!isoString) return '';
@@ -62,7 +63,7 @@ export const SessionManagement = () => {
         const response = await mockApi.getSessions(groupId, courseId);
         setSessions(response.data);
       } catch (err) {
-        console.error('Error fetching sessions:', err);
+        toast.error(err.response?.data?.message || "Something went wrong");
       } finally {
         setIsLoading(false);
       }
@@ -95,7 +96,7 @@ export const SessionManagement = () => {
       setNewStartTime('');
       setNewEndTime('');
     } catch (err) {
-      console.error('Error creating session:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     } finally {
       setIsCreating(false);
     }
@@ -123,7 +124,7 @@ export const SessionManagement = () => {
       setEditingId(null);
       setEditData({ name: '', startTime: '', endTime: '' });
     } catch (err) {
-      console.error('Error updating session:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 
@@ -140,7 +141,7 @@ export const SessionManagement = () => {
       await mockApi.deleteSession(id);
       setSessions(sessions.filter((s) => s.id !== id));
     } catch (err) {
-      console.error('Error deleting session:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 

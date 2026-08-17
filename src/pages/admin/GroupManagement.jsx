@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, ChevronRight, X, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { mockApi } from '../../api/axiosInstance.js';
+import { toast } from "sonner"
 
 export const GroupManagement = () => {
   const [groups, setGroups] = useState([]);
@@ -31,7 +32,7 @@ export const GroupManagement = () => {
         const response = await mockApi.getGroups();
         setGroups(response.data);
       } catch (err) {
-        console.error('Error fetching groups:', err);
+        toast.error(err.response?.data?.message || "Something went wrong");
       } finally {
         setIsLoading(false);
       }
@@ -51,7 +52,7 @@ export const GroupManagement = () => {
       setNewGroupName('');
       setIsModalOpen(false);
     } catch (err) {
-      console.error('Error creating group:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 
@@ -73,7 +74,7 @@ export const GroupManagement = () => {
       setIsEditModalOpen(false);
       setEditingGroup(null);
     } catch (err) {
-      console.error('Error updating group:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 
@@ -92,7 +93,7 @@ export const GroupManagement = () => {
       setIsDeleteModalOpen(false);
       setGroupToDelete(null);
     } catch (err) {
-      console.error('Error deleting group:', err);
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 

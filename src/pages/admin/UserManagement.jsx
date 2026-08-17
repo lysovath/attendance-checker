@@ -14,6 +14,7 @@ import {
   IdCard,
   Loader2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { mockApi } from '../../api/axiosInstance.js';
 
@@ -55,7 +56,7 @@ export const UserManagement = () => {
         setTrainers(fetchedTrainers);
         setTrainees(fetchedTrainees);
       } catch (err) {
-        console.error('Error fetching users:', err);
+        toast.error(err.response?.data?.message || "Something went wrong")
       } finally {
         setIsLoading(false);
       }
@@ -89,12 +90,11 @@ export const UserManagement = () => {
         setActiveList([...activeList, res.data]);
       } else if (activeRole === 'trainees') {
         const res = await mockApi.createTrainee({ name: formData.name, email: formData.email, studentId: formData.studentId });
-        console.log('Created Trainee:', res.data);
         setActiveList([...activeList, res.data]);
       }
       setFormData({ name: '', email: '', studentId: '' });
-    } catch (err) {
-      console.error('Error creating user:', err);
+    } catch (error) {
+        toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setIsCreating(false);
     }
@@ -107,13 +107,23 @@ export const UserManagement = () => {
   };
 
   // Save Name Edit
-  const handleSaveEdit = (id) => {
+  const handleSaveEdit = async (id) => {
     if (!editName.trim()) return;
-    setActiveList(
-      activeList.map((u) => (u.id === id ? { ...u, name: editName } : u))
-    );
-    setEditingId(null);
-    setEditName('');
+
+    try {
+        if(activeRole === "trainees"){
+            await mockApi.updateTrainee(id, editName);
+        } else {
+            await mockApi.updateUser(id, editName);
+        }
+        setActiveList(
+          activeList.map((u) => (u.id === id ? { ...u, name: editName } : u))
+        );   
+        setEditingId(null);
+        setEditName('');     
+    } catch (error){
+        toast.error(error.response?.data?.message || 'Something went wrong');
+    }
   };
 
   // Delete User
@@ -173,11 +183,11 @@ export const UserManagement = () => {
             {activeRole !== 'admins' && (
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">
-                  {activeRole === 'trainers' ? 'Trainer ID' : 'Student ID'}
+                  Student ID
                 </label>
                 <input
                   type="text"
-                  placeholder={activeRole === 'trainers' ? 'e.g. TR-9021' : 'e.g. ST-1001'}
+                  placeholder={'IDTB110012'}
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                   disabled={isCreating}
