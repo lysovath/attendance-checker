@@ -176,8 +176,16 @@ export const mockApi = {
 
   getSessions: async (groupId, courseId) => {
     try {
-        console.log(`Fetching sessions for groupId: ${groupId}, courseId: ${courseId}`);
         const response = await api.get(`/sessions`, { params: { groupId, courseId } });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  getSessionById: async (sessionId) => {
+    try {
+        const response = await api.get(`/sessions/${sessionId}`);
         return response.data;
     } catch (err) {
         throw err;

@@ -1,83 +1,167 @@
 // src/pages/trainer/TrainerCourseDetailPage.jsx
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  CheckCircle2, 
-  CircleDashed, 
-  Users, 
-  ChevronRight 
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  CircleDashed,
+  Users,
+  ChevronRight,
+} from "lucide-react";
+import { toast } from "sonner";
 
-const mockCourseData = {
-  id: 'c1',
-  name: 'React Fundamentals 2026',
-  groupName: 'Frontend Alpha 2026',
-  traineeCount: 24,
-  sessions: [
-    {
-      id: 'sess-101',
-      title: 'Session 1: React Basics & JSX Syntax',
-      date: '2026-08-10',
-      startTime: '09:00 AM',
-      endTime: '11:00 AM',
-      isCompleted: true,
-      attendanceMarked: true,
-      presentCount: 22,
-      totalTrainees: 24,
-    },
-    {
-      id: 'sess-102',
-      title: 'Session 2: Components, Props & State',
-      date: '2026-08-14',
-      startTime: '09:00 AM',
-      endTime: '11:00 AM',
-      isCompleted: true,
-      attendanceMarked: true,
-      presentCount: 24,
-      totalTrainees: 24,
-    },
-    {
-      id: 'sess-103',
-      title: 'Session 3: useEffect & Lifecycle Hooks',
-      date: '2026-08-18',
-      startTime: '09:00 AM',
-      endTime: '11:00 AM',
-      isCompleted: false,
-      attendanceMarked: false,
-      presentCount: 0,
-      totalTrainees: 24,
-    },
-    {
-      id: 'sess-104',
-      title: 'Session 4: Form Handling & Validation',
-      date: '2026-08-22',
-      startTime: '09:00 AM',
-      endTime: '11:00 AM',
-      isCompleted: false,
-      attendanceMarked: false,
-      presentCount: 0,
-      totalTrainees: 24,
-    },
-  ],
+import { mockApi } from "../../api/axiosInstance";
+
+// Skeleton Loader Component matching the page layout
+const CourseDetailSkeleton = () => {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header Card Skeleton */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-9 h-9 bg-gray-200 rounded-xl" />
+          <div className="space-y-2">
+            <div className="h-4 w-20 bg-gray-200 rounded-md" />
+            <div className="h-6 w-64 bg-gray-200 rounded-md" />
+          </div>
+        </div>
+        <div className="pt-2 border-t border-gray-100 flex items-center">
+          <div className="h-4 w-36 bg-gray-100 rounded-md" />
+        </div>
+      </div>
+
+      {/* Pending Sessions Section Skeleton */}
+      <div className="space-y-3">
+        <div className="h-5 w-56 bg-gray-200 rounded-md" />
+        <div className="space-y-3">
+          {[...Array(2)].map((_, idx) => (
+            <div
+              key={idx}
+              className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div className="space-y-3">
+                <div className="h-4 w-48 bg-gray-200 rounded-md" />
+                <div className="flex space-x-4">
+                  <div className="h-3 w-24 bg-gray-100 rounded-md" />
+                  <div className="h-3 w-32 bg-gray-100 rounded-md" />
+                </div>
+              </div>
+              <div className="h-8 w-32 bg-gray-200 rounded-xl self-end sm:self-center" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Completed Sessions Section Skeleton */}
+      <div className="space-y-3 pt-4">
+        <div className="h-5 w-48 bg-gray-200 rounded-md" />
+        <div className="space-y-3">
+          {[...Array(2)].map((_, idx) => (
+            <div
+              key={idx}
+              className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <div className="h-4 w-44 bg-gray-200 rounded-md" />
+                  <div className="h-4 w-16 bg-gray-100 rounded-md" />
+                </div>
+                <div className="flex space-x-4">
+                  <div className="h-3 w-24 bg-gray-100 rounded-md" />
+                  <div className="h-3 w-32 bg-gray-100 rounded-md" />
+                </div>
+              </div>
+              <div className="h-8 w-28 bg-gray-100 rounded-xl self-end sm:self-center" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export const TrainerCourseDetailPage = () => {
-  const { courseId } = useParams();
-  const [course] = useState(mockCourseData);
+  const { courseId, groupId } = useParams();
+
+  const [course, setCourse] = useState({});
+  const [sessions, setSessions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const navigate = useNavigate();
 
-  const pendingSessions = course.sessions.filter((s) => !s.isCompleted);
-  const completedSessions = course.sessions.filter((s) => s.isCompleted);
+  useEffect(() => {
+    const getData = async () => {
+      setIsLoading(true);
+      try {
+        const [courseRes, sessionsRes] = await Promise.all([
+          mockApi.getGroupDetail(groupId),
+          mockApi.getSessions(groupId, courseId),
+        ]);
+
+        const matchedCourse = courseRes.data?.courses?.find(
+          (c) => c.id === Number(courseId)
+        );
+
+        const courseData = {
+          ...matchedCourse,
+          groupName: courseRes.data?.name || "",
+          traineeCount: courseRes.data?.trainees?.length || 0,
+        };
+
+        const now = Date.now();
+        const sessionsData = (sessionsRes.data || []).map((session) => {
+          const start = new Date(session.startTime);
+          const end = new Date(session.endTime);
+          return {
+            id: session.id,
+            name: session.name,
+            isCompleted: now > end.getTime(),
+            date: start.toLocaleDateString("en-CA"),
+            startTime: start.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+            endTime: end.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+          };
+        });
+
+        setCourse(courseData);
+        setSessions(sessionsData);
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Something went wrong");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (groupId && courseId) {
+      getData();
+    }
+  }, [groupId, courseId]);
+
+  // Derived state calculated from the standalone `sessions` state
+  const pendingSessions = sessions.filter((s) => !s.isCompleted);
+  const completedSessions = sessions.filter((s) => s.isCompleted);
 
   const handleSessionClick = (sessionId) => {
-    navigate(`/trainer/courses/${courseId}/sessions/${sessionId}`);
+    navigate(
+      `/trainer/groups/${groupId}/courses/${courseId}/sessions/${sessionId}`
+    );
   };
 
   const onBack = () => {
-    navigate(-1); // Navigate back to the previous page
+    navigate(-1);
+  };
+
+  if (isLoading) {
+    return <CourseDetailSkeleton />;
   }
 
   return (
@@ -95,7 +179,9 @@ export const TrainerCourseDetailPage = () => {
             <span className="px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-md">
               {course.groupName}
             </span>
-            <h1 className="text-xl font-bold text-gray-900 mt-1">{course.name}</h1>
+            <h1 className="text-xl font-bold text-gray-900 mt-1">
+              {course.name}
+            </h1>
           </div>
         </div>
 
@@ -104,12 +190,6 @@ export const TrainerCourseDetailPage = () => {
           <div className="flex items-center space-x-2">
             <Users size={16} className="text-gray-400" />
             <span>{course.traineeCount} Enrolled Trainees</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 size={16} className="text-emerald-500" />
-            <span>
-              {completedSessions.length} of {course.sessions.length} Sessions Completed
-            </span>
           </div>
         </div>
       </div>
@@ -133,11 +213,11 @@ export const TrainerCourseDetailPage = () => {
               <div
                 key={session.id}
                 onClick={() => handleSessionClick(session.id)}
-                className="group bg-white p-5 rounded-2xl border border-gray-100 shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="group bg-white p-5 rounded-2xl border border-gray-900 shadow-xs hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="space-y-2">
                   <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors text-sm">
-                    {session.title}
+                    {session.name}
                   </h3>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
@@ -147,7 +227,9 @@ export const TrainerCourseDetailPage = () => {
                     </span>
                     <span className="flex items-center space-x-1">
                       <Clock size={13} className="text-gray-400" />
-                      <span>{session.startTime} - {session.endTime}</span>
+                      <span>
+                        {session.startTime} - {session.endTime}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -189,11 +271,13 @@ export const TrainerCourseDetailPage = () => {
               <div
                 key={session.id}
                 onClick={() => handleSessionClick(session.id)}
-                className="group bg-slate-50/70 p-5 rounded-2xl border border-gray-100 hover:bg-white hover:border-gray-200 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="group bg-white p-5 rounded-2xl border border-gray-900 hover:bg-white hover:border-emerald-400 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <h3 className="font-semibold text-gray-800 text-sm">{session.title}</h3>
+                    <h3 className="font-semibold text-gray-800 text-sm">
+                      {session.name}
+                    </h3>
                     <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md">
                       Completed
                     </span>
@@ -206,19 +290,14 @@ export const TrainerCourseDetailPage = () => {
                     </span>
                     <span className="flex items-center space-x-1">
                       <Clock size={13} className="text-gray-400" />
-                      <span>{session.startTime} - {session.endTime}</span>
+                      <span>
+                        {session.startTime} - {session.endTime}
+                      </span>
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-4 self-end sm:self-center">
-                  <div className="text-right text-xs">
-                    <p className="font-semibold text-gray-700">
-                      {session.presentCount} / {session.totalTrainees} Present
-                    </p>
-                    <p className="text-emerald-600 text-[11px] font-medium">Record Saved</p>
-                  </div>
-
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

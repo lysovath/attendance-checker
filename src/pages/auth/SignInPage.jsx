@@ -8,19 +8,32 @@ export const SignInPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || loading) return;
+
+    setLoading(true);
+    setError('');
+
     try {
-      const result = await signIn.create({ identifier: email, password });
+      const result = await signIn.create({ 
+        identifier: email, 
+        password 
+      });
+
       if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId });
-        navigate('/dashboard');
+        await setActive({ 
+          session: result.createdSessionId,
+          beforeEmit: () => navigate('/dashboard')
+        });
       }
     } catch (err) {
       setError(err.errors?.[0]?.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,9 +51,10 @@ export const SignInPage = () => {
             <input 
               type="email" 
               required
+              disabled={loading}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none"
+              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -48,16 +62,28 @@ export const SignInPage = () => {
             <input 
               type="password" 
               required
+              disabled={loading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none"
+              className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
           <button 
             type="submit" 
-            className="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+            disabled={loading || !isLoaded}
+            className="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Sign In
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing In...
+              </span>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 

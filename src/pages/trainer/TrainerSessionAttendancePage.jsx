@@ -1,5 +1,5 @@
 // src/pages/trainer/TrainerSessionAttendancePage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -8,14 +8,21 @@ import {
   Save, 
   RotateCcw,
   Lock,
-  Clock,
-  AlertCircle
+  Clock
 } from 'lucide-react';
+import { toast } from "sonner";
 
-const STATUS_TYPES = ['Present', 'Absent', 'Excused', 'Late'];
+import { mockApi } from '../../api/axiosInstance';
+
+const STATUS_TYPES = ['PRESENT', 'ABSENT', 'EXCUSED', 'LATE'];
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
+    PRESENT: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    ABSENT: 'bg-rose-50 text-rose-700 border-rose-200',
+    EXCUSED: 'bg-amber-50 text-amber-700 border-amber-200',
+    LATE: 'bg-purple-50 text-purple-700 border-purple-200',
+    // Fallback capitalizing casing if needed
     Present: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     Absent: 'bg-rose-50 text-rose-700 border-rose-200',
     Excused: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -33,30 +40,103 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const mockTrainees = [
-  { id: 'st1', studentId: 'TRN-001', name: 'John Doe', email: 'john@example.com', status: 'Present' },
-  { id: 'st2', studentId: 'TRN-002', name: 'Jane Smith', email: 'jane@example.com', status: 'Absent' },
-  { id: 'st3', studentId: 'TRN-003', name: 'Robert Paulson', email: 'robert@example.com', status: 'Excused' },
-  { id: 'st4', studentId: 'TRN-004', name: 'Alice Walker', email: 'alice@example.com', status: 'Present' },
-];
+// Skeleton Loader Component
+const AttendanceSkeleton = () => {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center space-x-4">
+          <div className="w-9 h-9 bg-gray-200 rounded-xl" />
+          <div className="space-y-2">
+            <div className="h-6 w-56 bg-gray-200 rounded-md" />
+            <div className="h-3 w-32 bg-gray-100 rounded-md" />
+          </div>
+        </div>
+        <div className="h-10 w-36 bg-gray-200 rounded-xl" />
+      </div>
+
+      {/* Main Content Skeleton */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="h-5 w-40 bg-gray-200 rounded-md" />
+          <div className="h-9 w-full md:w-72 bg-gray-200 rounded-xl" />
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className="bg-slate-50 p-4 border-b border-gray-100 flex justify-between">
+            <div className="h-4 w-20 bg-gray-200 rounded" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+          </div>
+          <div className="divide-y divide-gray-100">
+            {[...Array(5)].map((_, idx) => (
+              <div key={idx} className="p-4 flex items-center justify-between">
+                <div className="h-4 w-20 bg-gray-100 rounded" />
+                <div className="space-y-1">
+                  <div className="h-4 w-36 bg-gray-200 rounded" />
+                  <div className="h-3 w-48 bg-gray-100 rounded" />
+                </div>
+                <div className="h-6 w-20 bg-gray-100 rounded-full" />
+                <div className="flex space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-7 w-16 bg-gray-100 rounded-lg" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const TrainerSessionAttendancePage = ({ 
   sessionName = "Session 3: useEffect & Lifecycle Hooks",
-  // sessionStatus can be: 'ongoing' | 'upcoming' | 'completed'
-  sessionStatus = 'completed' 
 }) => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   
-  // Committed trainees attendance state
-  const [trainees, setTrainees] = useState(mockTrainees);
+  // State variables
+  const [trainees, setTrainees] = useState([]);
+  const [session, setSession] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // Draft state holding local edits before saving
   const [traineeDrafts, setTraineeDrafts] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState("");
 
   const isEditable = sessionStatus === 'ongoing';
+
+  useEffect(() => {
+    const getData = async () => {
+      setIsLoading(true);
+      try {
+        const [res, sessionRes] = await Promise.all([
+          mockApi.getTraineeAttendance(sessionId),
+          mockApi.getSessionById(sessionId)
+        ]);
+
+        const now = Date.now();
+        const start = new Date(sessionRes.data.startTime);
+        const end = new Date(sessionRes.data.endTime);
+
+        setSessionStatus(now < start ? "upcoming" : now > end ? "completed" : "ongoing");
+        setSession(sessionRes.data);
+        setTrainees(res.data.trainees);
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Something went wrong");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getData();
+  }, [sessionId]);
 
   // Handle staging a status change locally
   const handleStageStatus = (personId, originalStatus, newStatus) => {
@@ -90,20 +170,24 @@ export const TrainerSessionAttendancePage = ({
 
     const payload = {
       sessionId: sessionId || 'SESS-2026-03',
-      traineeUpdates: Object.entries(traineeDrafts).map(([id, status]) => ({ id, status })),
+      traineeUpdates: Object.entries(traineeDrafts).map(([id, status]) => ({ traineeId: Number(id), status })),
     };
 
-    console.log('Sending Trainee Attendance Payload to Backend:', payload);
     setIsSaving(true);
-    
-    setTimeout(() => {
+    try {
+      await mockApi.batchCreateTraineeAttendance(sessionId, payload.traineeUpdates);
       setTrainees((prev) =>
         prev.map((t) => (traineeDrafts[t.id] ? { ...t, status: traineeDrafts[t.id] } : t))
       );
-      setTraineeDrafts({});
+
+      setTraineeDrafts({});       
+      toast.success("Attendance saved successfully");
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response?.data?.message || "Something went wrong");
+    } finally {
       setIsSaving(false);
-      alert('Trainee attendance saved successfully!');
-    }, 600);
+    }
   };
 
   // Filter list by search query
@@ -113,6 +197,10 @@ export const TrainerSessionAttendancePage = ({
       person.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       person.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (isLoading) {
+    return <AttendanceSkeleton />;
+  }
 
   return (
     <div className="space-y-6">
@@ -127,7 +215,7 @@ export const TrainerSessionAttendancePage = ({
           </button>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold text-gray-900">{sessionName}</h1>
+              <h1 className="text-xl font-bold text-gray-900">{session.name}</h1>
               <span
                 className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${
                   sessionStatus === 'ongoing'
@@ -141,7 +229,7 @@ export const TrainerSessionAttendancePage = ({
               </span>
             </div>
             <p className="text-xs text-gray-500 font-mono mt-0.5">
-              Session ID: {sessionId || 'SESS-2026-03'}
+              Session ID: { session.id }
             </p>
           </div>
         </div>

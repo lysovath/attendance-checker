@@ -109,7 +109,7 @@ export default function App() {
       />
 
       <Route
-        path="/trainer/courses"
+        path="/trainer/groups/:groupId/courses"
         element={
           <ProtectedLayout>
             <TrainerDashboard />
@@ -118,7 +118,7 @@ export default function App() {
       />
 
       <Route
-        path="/trainer/courses/:courseId"
+        path="/trainer/groups/:groupId/courses/:courseId"
         element={
           <ProtectedLayout>
             <TrainerCourseDetailPage />
@@ -127,7 +127,7 @@ export default function App() {
       />
 
       <Route
-        path="/trainer/courses/:courseId/sessions/:sessionId"
+        path="/trainer/groups/:groupId/courses/:courseId/sessions/:sessionId"
         element={
           <ProtectedLayout>
             <TrainerSessionAttendancePage />

@@ -7,7 +7,7 @@ import {
 import { useAppAuth } from '../../context/AuthContext';
 
 export const Sidebar = ({ isOpen, onClose }) => {
-  const { role } = useAppAuth();
+  const { role, userData } = useAppAuth();
 
   const adminLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,7 +18,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
   const trainerLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/trainer/courses', label: 'My Courses & Group', icon: LayoutDashboard },  
+    { to: `/trainer/groups/${userData.groupId}/courses`, label: 'My Courses & Group', icon: LayoutDashboard },  
   ];
 
   const links = role === 'ADMIN' ? adminLinks : trainerLinks;
