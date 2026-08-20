@@ -1,7 +1,7 @@
 // src/pages/admin/GroupManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, ChevronRight, X, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, ChevronRight, X, Edit2, Trash2 } from 'lucide-react';
 import { mockApi } from '../../api/axiosInstance.js';
 import { toast } from "sonner"
 

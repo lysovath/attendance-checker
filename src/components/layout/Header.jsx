@@ -1,17 +1,14 @@
 // src/components/layout/Header.jsx
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
-import { Menu, ArrowLeft, LogOut, User } from 'lucide-react';
+import { Menu, LogOut, User } from 'lucide-react';
 import { useAppAuth } from '../../context/AuthContext';
 
 export const Header = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { signOut } = useClerk();
   const { userData } = useAppAuth();
-
-  const isHome = location.pathname === '/dashboard';
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-20">

@@ -1,17 +1,21 @@
 // src/pages/admin/AdminSessionAttendancePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Search, 
-  GraduationCap, 
-  UserCheck, 
-  Save, 
+import {
+  ArrowLeft,
+  Search,
+  GraduationCap,
+  UserCheck,
+  Save,
   RotateCcw,
-  Loader2 
+  Loader2,
+  Upload,
+  Download
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { mockApi } from '../../api/axiosInstance.js';
+import { csvToObjects, downloadBlob } from '../../utils/csv.js';
 
 const STATUS_TYPES = ['PRESENT', 'LATE', 'EXCUSED', 'ABSENT'];
 
@@ -40,7 +44,7 @@ const StatusBadge = ({ status }) => {
 };
 
 export const AdminSessionAttendancePage = () => {
-  const { groupId, sessionId } = useParams();
+  const { sessionId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const sessionName = location.state?.sessionName || 'Session Attendance';
@@ -50,6 +54,7 @@ export const AdminSessionAttendancePage = () => {
   // Loading & state management
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionType, setSessionType] = useState('');
 
   // Committed attendance state (from backend)
   const [trainees, setTrainees] = useState([]);
@@ -72,14 +77,16 @@ export const AdminSessionAttendancePage = () => {
     const fetchAttendanceData = async () => {
       setIsLoading(true);
       try {
-        const [traineeAttendanceResponse, trainerAttendanceResponse] = await Promise.all([
+        const [traineeAttendanceResponse, trainerAttendanceResponse, sessionResponse] = await Promise.all([
           mockApi.getTraineeAttendance(sessionId),
-          mockApi.getTrainerAttendance(sessionId)
+          mockApi.getTrainerAttendance(sessionId),
+          mockApi.getSessionById(sessionId),
         ]);
         setTrainees(traineeAttendanceResponse.data?.trainees || []);
         setTrainers(trainerAttendanceResponse.data?.trainers || []);
+        setSessionType(sessionResponse.data?.type || '');
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Something went wrong');;
+        toast.error(error.response?.data?.message || 'Something went wrong');
       } finally {
         setIsLoading(false);
       }
@@ -150,6 +157,50 @@ export const AdminSessionAttendancePage = () => {
     }
   };
 
+  const refreshTrainees = async () => {
+    try {
+      const res = await mockApi.getTraineeAttendance(sessionId);
+      setTrainees(res.data?.trainees || []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to refresh');
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await mockApi.downloadAttendanceTemplate(sessionId);
+      downloadBlob(blob, `attendance_session_${sessionId}.csv`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to download template');
+    }
+  };
+
+  const handleImportCsv = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const objects = csvToObjects(text);
+      const rows = objects
+        .map((o) => ({ email: o.email || '', status: o.status || o.attendance || '' }))
+        .filter((r) => r.email && r.status);
+
+      if (rows.length === 0) {
+        toast.error('No valid rows. Need columns: email, status (P/A/L/E)');
+        return;
+      }
+
+      const res = await mockApi.importTraineeAttendance(sessionId, rows);
+      const notFound = res.data?.notFound || [];
+      toast.success(`Marked ${res.data?.marked ?? 0}${notFound.length ? `, ${notFound.length} email(s) not found` : ''}`);
+      await refreshTrainees();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to import attendance');
+    }
+  };
+
   // Filter list by search query
   const filteredList = currentList.filter(
     (person) =>
@@ -171,9 +222,22 @@ export const AdminSessionAttendancePage = () => {
           </button>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{sessionName}</h1>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">
-              Session ID: {sessionId || 'SESS-2026-01'}
-            </p>
+            <div className="flex items-center space-x-2 mt-0.5">
+              {sessionType && (
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${
+                    sessionType === 'LAB'
+                      ? 'bg-violet-100 text-violet-700'
+                      : 'bg-sky-100 text-sky-700'
+                  }`}
+                >
+                  {sessionType}
+                </span>
+              )}
+              <span className="text-xs text-gray-500 font-mono">
+                Session ID: {sessionId || '—'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -250,15 +314,38 @@ export const AdminSessionAttendancePage = () => {
             </button>
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/40 outline-none text-sm"
-            />
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            {isTraineeTab && (
+              <>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-200 cursor-pointer whitespace-nowrap"
+                  title="Download roster as CSV to fill P/A/L/E"
+                >
+                  <Download size={14} />
+                  <span>Template</span>
+                </button>
+                <label
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-200 cursor-pointer whitespace-nowrap"
+                  title="Upload CSV with columns email, status (P/A/L/E)"
+                >
+                  <Upload size={14} />
+                  <span>Import CSV</span>
+                  <input type="file" accept=".csv" onChange={handleImportCsv} className="hidden" />
+                </label>
+              </>
+            )}
+
+            <div className="relative flex-1 md:w-72">
+              <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
+              <input
+                type="text"
+                placeholder={`Search ${activeTab}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/40 outline-none text-sm"
+              />
+            </div>
           </div>
         </div>
 

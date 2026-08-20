@@ -46,8 +46,6 @@ export const UserManagement = () => {
           mockApi.getUsers(),
           mockApi.getTrainees()
         ]);
-        console.log('Fetched Users:', usersResponse.data);
-        console.log('Fetched Trainees:', traineeReponse.data);
         const fetchedAdmins = (usersResponse.data || []).filter(user => user.role.toLowerCase() === 'admin');
         const fetchedTrainers = (usersResponse.data || []).filter(user => user.role.toLowerCase() === 'trainer');
         const fetchedTrainees = traineeReponse.data || [];
@@ -127,8 +125,21 @@ export const UserManagement = () => {
   };
 
   // Delete User
-  const handleDeleteUser = (id) => {
-    setActiveList(activeList.filter((u) => u.id !== id));
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('Delete this user permanently? This cannot be undone.')) return;
+
+    try {
+      if (activeRole === 'trainees') {
+        await mockApi.deleteTrainee(id);
+        setActiveList(activeList.filter((u) => u.id !== id));
+      } else {
+        await mockApi.deleteUser(id);
+        setActiveList(activeList.filter((u) => u.id !== id));
+      }
+      toast.success('User deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong');
+    }
   };
 
   // Search Filter

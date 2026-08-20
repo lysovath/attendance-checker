@@ -94,9 +94,7 @@ const AttendanceSkeleton = () => {
   );
 };
 
-export const TrainerSessionAttendancePage = ({ 
-  sessionName = "Session 3: useEffect & Lifecycle Hooks",
-}) => {
+export const TrainerSessionAttendancePage = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   
@@ -125,8 +123,14 @@ export const TrainerSessionAttendancePage = ({
         const now = Date.now();
         const start = new Date(sessionRes.data.startTime);
         const end = new Date(sessionRes.data.endTime);
+        const hasValidTimes =
+          !isNaN(start.getTime()) && !isNaN(end.getTime()) && end.getTime() > start.getTime();
 
-        setSessionStatus(now < start ? "upcoming" : now > end ? "completed" : "ongoing");
+        if (!hasValidTimes) {
+          setSessionStatus("upcoming");
+        } else {
+          setSessionStatus(now < start ? "upcoming" : now > end ? "completed" : "ongoing");
+        }
         setSession(sessionRes.data);
         setTrainees(res.data.trainees);
       } catch (error) {
@@ -169,7 +173,7 @@ export const TrainerSessionAttendancePage = ({
     if (!hasUnsavedChanges || !isEditable) return;
 
     const payload = {
-      sessionId: sessionId || 'SESS-2026-03',
+      sessionId: sessionId,
       traineeUpdates: Object.entries(traineeDrafts).map(([id, status]) => ({ traineeId: Number(id), status })),
     };
 
@@ -183,7 +187,6 @@ export const TrainerSessionAttendancePage = ({
       setTraineeDrafts({});       
       toast.success("Attendance saved successfully");
     } catch (error) {
-      console.log(error);
       toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setIsSaving(false);
@@ -193,9 +196,9 @@ export const TrainerSessionAttendancePage = ({
   // Filter list by search query
   const filteredList = trainees.filter(
     (person) =>
-      person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (person.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (person.studentId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (person.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -216,6 +219,17 @@ export const TrainerSessionAttendancePage = ({
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-xl font-bold text-gray-900">{session.name}</h1>
+              {session.type && (
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${
+                    session.type === 'LAB'
+                      ? 'bg-violet-100 text-violet-700'
+                      : 'bg-sky-100 text-sky-700'
+                  }`}
+                >
+                  {session.type}
+                </span>
+              )}
               <span
                 className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${
                   sessionStatus === 'ongoing'

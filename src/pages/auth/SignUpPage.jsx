@@ -40,7 +40,7 @@ export const SignUpPage = () => {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setPendingVerification(true);
     } catch (err) {
-      setError(err.errors?.[0]?.message || err.response.data.message || 'Failed to initialize signup');
+      setError(err.errors?.[0]?.message || err.response?.data?.message || 'Failed to initialize signup');
     } finally {
       setLoading(false);
     }

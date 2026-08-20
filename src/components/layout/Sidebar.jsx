@@ -1,8 +1,8 @@
 // src/components/layout/Sidebar.jsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, BookOpen, Users, Shield, CalendarCheck, X 
+import {
+  LayoutDashboard, BookOpen, Users, Shield, X, BarChart3, ArrowRightLeft
 } from 'lucide-react';
 import { useAppAuth } from '../../context/AuthContext';
 
@@ -13,12 +13,16 @@ export const Sidebar = ({ isOpen, onClose }) => {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/admin/courses', label: 'Course Catalog', icon: BookOpen },
     { to: '/admin/groups', label: 'Group Config', icon: Users },
+    { to: '/admin/enroll', label: 'Bulk Enroll & Moves', icon: ArrowRightLeft },
+    { to: '/admin/reports', label: 'Weekly Reports', icon: BarChart3 },
     { to: '/admin/users', label: 'User Management', icon: Shield },
   ];
 
   const trainerLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: `/trainer/groups/${userData.groupId}/courses`, label: 'My Courses & Group', icon: LayoutDashboard },  
+    ...(userData.groupId
+      ? [{ to: `/trainer/groups/${userData.groupId}/courses`, label: 'My Courses & Group', icon: LayoutDashboard }]
+      : []),
   ];
 
   const links = role === 'ADMIN' ? adminLinks : trainerLinks;

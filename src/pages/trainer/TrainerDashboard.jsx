@@ -1,13 +1,9 @@
 // src/pages/trainer/TrainerDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Search, 
-  Users, 
-  Calendar, 
-  ChevronRight, 
-  Clock
+import {
+  Search,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -69,19 +65,6 @@ export const TrainerDashboard = () => {
   // Navigation callback for Course Detail (Placeholder)
   const handleCourseClick = (course) => {
     navigate(`/trainer/groups/${groupId}/courses/${course.id}`);
-  };
-
-  // Helper to format ISO datetime-local string to readable output
-  const formatNextSession = (dateTimeStr) => {
-    if (!dateTimeStr) return 'No upcoming sessions';
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
   };
 
   const filteredCourses = assignedCourses.filter(

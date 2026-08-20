@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { mockApi } from '../../api/axiosInstance.js';
+import { toast } from 'sonner';
 
 export const GroupDetail = () => {
   const [groupName, setGroupName] = useState('');
@@ -139,6 +140,10 @@ export const GroupDetail = () => {
     setIsAddingCourse(true);
     try {
       const courseToAdd = allCourses.find((c) => c.id === Number(selectedCourseId));
+      if (!courseToAdd) {
+        toast.error('Selected course not found');
+        return;
+      }
       await mockApi.addCourseToGroup(groupId, Number(selectedCourseId));
       setCourses((prev) => [...prev, courseToAdd]);
       setIsCourseModalOpen(false);

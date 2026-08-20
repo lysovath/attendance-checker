@@ -12,9 +12,12 @@ import { GroupDetail } from './pages/admin/GroupDetail';
 import { SessionManagement } from './pages/admin/SessionManagement';
 import { AdminSessionAttendancePage } from './pages/admin/AdminSessionAttendancePage';
 import { UserManagement } from './pages/admin/UserManagement';
+import { ReportsPage } from './pages/admin/ReportsPage';
+import { BulkEnrollPage } from './pages/admin/BulkEnrollPage';
 import { TrainerDashboard } from './pages/trainer/TrainerDashboard';
 import { TrainerCourseDetailPage } from './pages/trainer/TrainerCourseDetail';
 import { TrainerSessionAttendancePage } from './pages/trainer/TrainerSessionAttendancePage';
+import { DashboardPage } from './pages/DashboardPage';
 
 // Guard for routes accessible only to unauthenticated users (SignIn / SignUp)
 const GuestLayout = ({ children }) => {
@@ -100,10 +103,7 @@ export default function App() {
         path="/dashboard" 
         element={
           <ProtectedLayout>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-              <p className="text-gray-500 mt-1">Welcome to the Attendance Management Portal.</p>
-            </div>
+            <DashboardPage />
           </ProtectedLayout>
         } 
       />
@@ -111,7 +111,7 @@ export default function App() {
       <Route
         path="/trainer/groups/:groupId/courses"
         element={
-          <ProtectedLayout>
+          <ProtectedLayout role="TRAINER">
             <TrainerDashboard />
           </ProtectedLayout>
         }
@@ -120,7 +120,7 @@ export default function App() {
       <Route
         path="/trainer/groups/:groupId/courses/:courseId"
         element={
-          <ProtectedLayout>
+          <ProtectedLayout role="TRAINER">
             <TrainerCourseDetailPage />
           </ProtectedLayout>
         }
@@ -129,7 +129,7 @@ export default function App() {
       <Route
         path="/trainer/groups/:groupId/courses/:courseId/sessions/:sessionId"
         element={
-          <ProtectedLayout>
+          <ProtectedLayout role="TRAINER">
             <TrainerSessionAttendancePage />
           </ProtectedLayout>
         }
@@ -185,6 +185,24 @@ export default function App() {
         element={
           <ProtectedLayout role="ADMIN">
             <UserManagement />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedLayout role="ADMIN">
+            <ReportsPage />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/admin/enroll"
+        element={
+          <ProtectedLayout role="ADMIN">
+            <BulkEnrollPage />
           </ProtectedLayout>
         }
       />

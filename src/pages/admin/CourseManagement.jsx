@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Check, X, Trash2, BookOpen, Loader2 } from 'lucide-react';
 import { mockApi } from '../../api/axiosInstance.js';
+import { toast } from 'sonner';
 
 export const CourseManagement = () => {
   const [courses, setCourses] = useState([]);
@@ -66,7 +67,6 @@ export const CourseManagement = () => {
     if (!editName.trim()) return;
     try {
       const updatedCourse = await mockApi.updateCourse(id, { name: editName });
-      console.log('Course updated:', updatedCourse.data);
       setCourses(courses.map((c) => (c.id === id ? updatedCourse.data : c)));
       setEditingId(null);
       setEditName('');
@@ -82,9 +82,9 @@ export const CourseManagement = () => {
   };
 
   // Handle Delete Course
-  const handleDeleteCourse = (id) => {
+  const handleDeleteCourse = async (id) => {
     try {
-      mockApi.deleteCourse(id);
+      await mockApi.deleteCourse(id);
       setCourses(courses.filter((c) => c.id !== id));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Something went wrong');

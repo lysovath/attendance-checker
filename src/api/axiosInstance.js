@@ -1,8 +1,9 @@
 // src/api/axiosInstance.js
+/* eslint-disable no-useless-catch */
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || 'https://api.example.com',
+  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -14,7 +15,9 @@ export const setupAxiosInterceptors = (getToken) => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    } catch (err) {}
+    } catch {
+      // token unavailable; continue without Authorization header
+    }
     return config;
   });
 };
@@ -230,7 +233,6 @@ export const mockApi = {
 
  batchCreateTrainerAttendances: async (sessionId, trainerAttendanceData) => {
     try {
-        console.log(`Sending batch create request for session ${sessionId} with data:`, trainerAttendanceData);
         const response = await api.post(`/sessions/${sessionId}/trainer-attendances/batch`, trainerAttendanceData);
         return response.data;
     } catch (err) {
@@ -256,6 +258,24 @@ export const mockApi = {
     }
   },
 
+  deleteUser: async (userId) => {
+    try {
+        const response = await api.delete(`/users/${userId}`);
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  deleteTrainee: async (traineeId) => {
+    try {
+        const response = await api.delete(`/trainees/${traineeId}`);
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
   getTraineeAttendance: async (sessionId) => {
     try {
         const response = await api.get(`/sessions/${sessionId}/trainee-attendances`);
@@ -273,6 +293,119 @@ export const mockApi = {
         throw err;
     }
  },
+
+  importTrainees: async (groupId, trainees) => {
+    try {
+        const response = await api.post('/trainees/import', { groupId, trainees });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  getDayRoster: async (groupId, date) => {
+    try {
+        const response = await api.get('/enrollments/roster', { params: { groupId, date } });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  getDayAssignments: async (date, groupId) => {
+    try {
+        const response = await api.get('/enrollments', { params: { date, groupId } });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  bulkAssignDay: async (groupId, date, traineeIds) => {
+    try {
+        const response = await api.post('/enrollments/bulk', { groupId, date, traineeIds });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  removeDayAssignments: async (date, traineeIds, groupId) => {
+    try {
+        const response = await api.post('/enrollments/remove', { date, traineeIds, ...(groupId ? { groupId } : {}) });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  resetDayAssignments: async (date, groupId) => {
+    try {
+        const response = await api.post('/enrollments/reset', { date, ...(groupId ? { groupId } : {}) });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  copyDayAssignments: async (fromDate, toDate) => {
+    try {
+        const response = await api.post('/enrollments/copy', { fromDate, toDate });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  getWeeklyReport: async (groupId, courseId) => {
+    try {
+        const response = await api.get('/reports/weekly', {
+            params: {
+                ...(groupId ? { groupId } : {}),
+                ...(courseId ? { courseId } : {}),
+            },
+        });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  downloadWeeklyReport: async (groupId, courseId, role) => {
+    try {
+        const response = await api.get('/reports/weekly/export', {
+            params: {
+                ...(groupId ? { groupId } : {}),
+                ...(courseId ? { courseId } : {}),
+                ...(role ? { role } : {}),
+            },
+            responseType: 'blob',
+        });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  importTraineeAttendance: async (sessionId, rows) => {
+    try {
+        const response = await api.post(`/sessions/${sessionId}/trainee-attendances/import`, rows);
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  downloadAttendanceTemplate: async (sessionId) => {
+    try {
+        const response = await api.get(`/sessions/${sessionId}/trainee-attendances/export`, {
+            responseType: 'blob',
+        });
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
 
   createAdminUser: async (userData) => {
     try {
@@ -304,6 +437,15 @@ export const mockApi = {
   getUsers: async () => {
     try {
         const response = await api.get('/users');
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
+  getDashboard: async () => {
+    try {
+        const response = await api.get('/dashboard');
         return response.data;
     } catch (err) {
         throw err;

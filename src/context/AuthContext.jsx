@@ -1,7 +1,8 @@
 // src/context/AuthContext.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
-import api, { setupAxiosInterceptors, mockApi } from '../api/axiosInstance';
+import { setupAxiosInterceptors, mockApi } from '../api/axiosInstance';
 
 const AuthContext = createContext();
 
