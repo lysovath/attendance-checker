@@ -44,13 +44,14 @@ export const SessionManagement = () => {
 
   // Form states for creating a new session
   const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionType, setNewSessionType] = useState('THEORY');
   const [newStartTime, setNewStartTime] = useState('');
   const [newEndTime, setNewEndTime] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
 
   // Form states for editing a session
   const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ name: '', startTime: '', endTime: '' });
+  const [editData, setEditData] = useState({ name: '', type: 'THEORY', startTime: '', endTime: '' });
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,6 +85,7 @@ export const SessionManagement = () => {
     try {
       const newSession = {
         name: newSessionName,
+        type: newSessionType,
         startTime: newStartTime,
         endTime: newEndTime,
       };
@@ -93,6 +95,7 @@ export const SessionManagement = () => {
       const createdSession = res.data;
       setSessions((prev) => [...prev, createdSession]);
       setNewSessionName('');
+      setNewSessionType('THEORY');
       setNewStartTime('');
       setNewEndTime('');
     } catch (err) {
@@ -108,6 +111,7 @@ export const SessionManagement = () => {
     setEditingId(session.id);
     setEditData({
       name: session.name,
+      type: session.type || 'THEORY',
       startTime: formatISOToInput(session.startTime),
       endTime: formatISOToInput(session.endTime),
     });
@@ -122,7 +126,7 @@ export const SessionManagement = () => {
       const updatedSession = await mockApi.updateSession(id, editData);
       setSessions(sessions.map((s) => (s.id === id ? updatedSession.data : s)));
       setEditingId(null);
-      setEditData({ name: '', startTime: '', endTime: '' });
+      setEditData({ name: '', type: 'THEORY', startTime: '', endTime: '' });
     } catch (err) {
       toast.error(err.response?.data?.message || "Something went wrong");
     }
@@ -203,6 +207,21 @@ export const SessionManagement = () => {
                 onChange={(e) => setNewSessionName(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Session Type
+              </label>
+              <select
+                value={newSessionType}
+                disabled={isCreating}
+                onChange={(e) => setNewSessionType(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm bg-white disabled:bg-gray-50"
+              >
+                <option value="THEORY">Theory</option>
+                <option value="LAB">Lab</option>
+              </select>
             </div>
 
             <div>
@@ -299,7 +318,18 @@ export const SessionManagement = () => {
                         className="w-full px-3 py-1.5 border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/40 font-semibold"
                         placeholder="Session Name"
                       />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-400 uppercase">Type</label>
+                          <select
+                            value={editData.type}
+                            onChange={(e) => setEditData({ ...editData, type: e.target.value })}
+                            className="w-full px-3 py-1.5 border rounded-md text-xs outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+                          >
+                            <option value="THEORY">Theory</option>
+                            <option value="LAB">Lab</option>
+                          </select>
+                        </div>
                         <div>
                           <label className="block text-[10px] font-semibold text-gray-400 uppercase">Start Time</label>
                           <input
@@ -344,6 +374,13 @@ export const SessionManagement = () => {
                           {session.name}
                         </p>
                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${
+                            session.type === 'LAB'
+                              ? 'bg-violet-100 text-violet-700'
+                              : 'bg-sky-100 text-sky-700'
+                          }`}>
+                            {session.type || 'THEORY'}
+                          </span>
                           <span className="flex items-center space-x-1">
                             <Calendar size={13} className="text-gray-400" />
                             <span>Start: {formatDateTime(session.startTime)}</span>
