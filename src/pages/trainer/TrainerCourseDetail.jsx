@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { mockApi } from "../../api/axiosInstance";
+import { formatDateUTC7, formatTimeUTC7 } from "../../utils/timezone.js";
 
 // Skeleton Loader Component matching the page layout
 const CourseDetailSkeleton = () => {
@@ -110,25 +111,15 @@ export const TrainerCourseDetailPage = () => {
           traineeCount: courseRes.data?.trainees?.length || 0,
         };
 
-        const now = Date.now();
         const sessionsData = (sessionsRes.data || []).map((session) => {
-          const start = new Date(session.startTime);
           const end = new Date(session.endTime);
           return {
             id: session.id,
             name: session.name,
-            isCompleted: now > end.getTime(),
-            date: start.toLocaleDateString("en-CA"),
-            startTime: start.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
-            endTime: end.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
+            isCompleted: Date.now() > end.getTime(),
+            date: formatDateUTC7(session.startTime),
+            startTime: formatTimeUTC7(session.startTime),
+            endTime: formatTimeUTC7(session.endTime),
           };
         });
 

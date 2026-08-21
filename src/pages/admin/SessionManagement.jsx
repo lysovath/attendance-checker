@@ -17,22 +17,7 @@ import {
 
 import { mockApi } from '../../api/axiosInstance.js';
 import { toast } from 'sonner';
-
-const formatISOToInput = (isoString) => {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-
-  const pad = (num) => String(num).padStart(2, '0');
-
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
+import { formatDateTimeLocalInput, formatDateTimeUTC7 } from '../../utils/timezone.js';
 
 export const SessionManagement = () => {
   const [sessions, setSessions] = useState([]);
@@ -112,8 +97,8 @@ export const SessionManagement = () => {
     setEditData({
       name: session.name,
       type: session.type || 'THEORY',
-      startTime: formatISOToInput(session.startTime),
-      endTime: formatISOToInput(session.endTime),
+      startTime: formatDateTimeLocalInput(session.startTime),
+      endTime: formatDateTimeLocalInput(session.endTime),
     });
   };
 
@@ -155,18 +140,9 @@ export const SessionManagement = () => {
     navigate(`/admin/groups/${groupId}/courses/${courseId}/sessions/${session.id}`, { state: { sessionName: session.name } });
   };
 
-  // Helper to format ISO datetime-local string to readable output
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return '';
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
+    return formatDateTimeUTC7(dateTimeStr);
   };
 
   const filteredSessions = sessions.filter((s) =>

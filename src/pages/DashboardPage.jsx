@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 
 import { mockApi } from '../api/axiosInstance.js';
 import { useAppAuth } from '../context/AuthContext.jsx';
+import { formatTimeUTC7 } from '../utils/timezone.js';
 
 const StatCard = ({ icon: Icon, label, value, sub, accent }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start justify-between">
@@ -93,8 +94,7 @@ export const DashboardPage = () => {
   };
 
   const formatTime = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return formatTimeUTC7(iso);
   };
 
   const rateColor = (rate) => {

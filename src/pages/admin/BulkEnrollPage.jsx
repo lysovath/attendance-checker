@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 
 import { mockApi } from '../../api/axiosInstance.js';
 import { csvToObjects } from '../../utils/csv.js';
+import { todayKeyUTC7 } from '../../utils/timezone.js';
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => todayKeyUTC7();
 
 export const BulkEnrollPage = () => {
   const [date, setDate] = useState(todayIso());
