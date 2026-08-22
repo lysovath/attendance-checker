@@ -213,6 +213,15 @@ export const mockApi = {
     }
   },
 
+  getSessionRoster: async (sessionId) => {
+    try {
+        const response = await api.get(`/sessions/${sessionId}/roster`);
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+  },
+
   getTrainers: async (groupId) => {
     try {
         const response = await api.get('/users', { params: { role: 'TRAINER', groupId } });
