@@ -75,7 +75,6 @@ export const UserManagement = () => {
   const handleAddUser = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || isCreating) return;
-    if (activeRole !== 'admins' && !formData.studentId.trim()) return;
 
     setIsCreating(true);
 
@@ -84,10 +83,10 @@ export const UserManagement = () => {
         const res = await mockApi.createAdminUser({ name: formData.name, email: formData.email });
         setActiveList([...activeList, res.data]);
       } else if (activeRole === 'trainers') {
-        const res = await mockApi.createTrainerUser({ name: formData.name, email: formData.email, studentId: formData.studentId });
+        const res = await mockApi.createTrainerUser({ name: formData.name, email: formData.email});
         setActiveList([...activeList, res.data]);
       } else if (activeRole === 'trainees') {
-        const res = await mockApi.createTrainee({ name: formData.name, email: formData.email, studentId: formData.studentId });
+        const res = await mockApi.createTrainee({ name: formData.name, email: formData.email});
         setActiveList([...activeList, res.data]);
       }
       setFormData({ name: '', email: '', studentId: '' });
@@ -189,23 +188,6 @@ export const UserManagement = () => {
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
-
-            {/* Student ID / Trainer ID Field */}
-            {activeRole !== 'admins' && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">
-                  Student ID
-                </label>
-                <input
-                  type="text"
-                  placeholder={'IDTB110012'}
-                  value={formData.studentId}
-                  onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                  disabled={isCreating}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-sm disabled:bg-gray-50 disabled:text-gray-400"
-                />
-              </div>
-            )}
 
             <button
               type="submit"
