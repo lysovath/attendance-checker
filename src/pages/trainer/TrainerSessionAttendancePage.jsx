@@ -1,5 +1,5 @@
 // src/pages/trainer/TrainerSessionAttendancePage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -112,6 +112,14 @@ export const TrainerSessionAttendancePage = () => {
 
   const isEditable = sessionStatus === 'ongoing';
 
+  const parseAsLiteralTime = useCallback((isoString) => {
+    if (!isoString) return new Date(NaN);
+
+    const literalString = String(isoString).replace(/Z$/i, '');
+
+    return new Date(literalString);
+  }, []);
+
   useEffect(() => {
     const getData = async () => {
       setIsLoading(true);
@@ -122,11 +130,10 @@ export const TrainerSessionAttendancePage = () => {
         ]);
 
         const now = Date.now();
-        const start = new Date(sessionRes.data.startTime);
-        const end = new Date(sessionRes.data.endTime);
+        const start = parseAsLiteralTime(sessionRes.data.startTime);
+        const end = parseAsLiteralTime(sessionRes.data.endTime);
         const hasValidTimes =
           !isNaN(start.getTime()) && !isNaN(end.getTime()) && end.getTime() > start.getTime();
-
         if (!hasValidTimes) {
           setSessionStatus("upcoming");
         } else {
